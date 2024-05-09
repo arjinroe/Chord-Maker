@@ -5,6 +5,19 @@ await WebMidi.enable();
 
 let transposition = 0;
 let myPitch = 60;
+let myChord = [];
+
+
+const chords ={
+  Major: [0,4,7],
+  Minor: [0,3,7],
+  Augmented: [0,4,8],
+  "Altered Dominant": [0,4,7,10,13,15,18,20]
+}
+
+const allChordNames = Object.keys(chords)
+
+
 
 // Initialize variables to store the first MIDI input and output devices detected.
 // These devices can be used to send or receive MIDI messages.
@@ -27,17 +40,28 @@ let slider = document.getElementById("slide");
 
 
 
-slider.addEventListener("change", function(){
+slider.addEventListener("input", function(){
   document.getElementById("transpoAmt").innerText = `${slider.value} semitones`;
+  transposition = parseInt(slider.value)
 });
 
 let chordDrop = document.getElementById("chordSelect");
+
+allChordNames.forEach((someName, index)=>{
+  chordDrop.innerHTML += `<option value=${index}>${someName}</option>`
+
+})
+
+chordDrop.addEventListener('change', ()=>{
+  myChord = chords[allChordNames[chordDrop.value]]
+  console.log(myChord)
+})
 
 
 
 // document.getElementById()
 
-let myChord = [];
+
 
 
 
@@ -73,10 +97,12 @@ myChord = [60, 64, 67] //this is just a way to test the following function
 const playChord = function (someMIDI) {
   let myPitch = someMIDI.note.number;
   let velocity = someMIDI.note.rawAttack;
-  myChord.forEach(function (myPitch) {
-    let midiNoteOutput = new Note (myPitch, { rawAttack: velocity });
-    myOutputs[0].channels[1].playNote(myNote);
+  let chordNotes = [];
+  myChord.forEach(function (chordMember) {
+    let midiNoteOutput = new Note (myPitch + chordMember + transposition, { rawAttack: velocity });
+    chordNotes.push(midiNoteOutput);
   });
+  return chordNotes
 };
 
 // Add an event listener for the 'change' event on the input devices dropdown.
@@ -93,6 +119,7 @@ dropIns.addEventListener("change", function () {
 
   // Change the input device based on the user's selection in the dropdown.
   myInputs = WebMidi.inputs[dropIns.value];
+  console.log(myInputs)
 
   
   // After changing the input device, add new listeners for 'noteon' and 'noteoff' events.
@@ -107,14 +134,14 @@ dropIns.addEventListener("change", function () {
 
     
 
-    myOutputs.sendNoteOn(midiProcess(someMIDI));
+    myOutputs.sendNoteOn(playChord(someMIDI));
   });
 
   myInputs.addListener("noteoff", function (someMIDI) {
     // Similarly, when a note off event is received, send a note off message to the output device.
     // This signals the end of a note being played.
 
-    myOutputs.sendNoteOff(midiProcess(someMIDI));
+    myOutputs.sendNoteOff(playChord(someMIDI));
   });
 });
 
@@ -125,6 +152,7 @@ dropOuts.addEventListener("change", function () {
   // The '.channels[1]' specifies that the script should use the first channel of the selected output device.
   // MIDI channels are often used to separate messages for different instruments or sounds.
   myOutputs = WebMidi.outputs[dropOuts.value].channels[1];
+  console.log(myOutputs)
 });
 
 // chordSelect.addEventListener("change", function (){
